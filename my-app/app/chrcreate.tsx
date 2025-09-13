@@ -9,7 +9,9 @@ import {
   Dimensions 
 } from 'react-native';
 
+
 const { width, height } = Dimensions.get('window');
+import CharacterRenderer from '@/components/CharacterRenderer';
 import { getFeatures } from '@/assets/images/character_sprites';
 
 type SelectedFeatures = {
@@ -108,6 +110,14 @@ const CharCreateScreen = () => {
     return features[category].find(feature => feature.id === selectedFeatures[category]);
   };
 
+  // Get the selected feature sources for the renderer
+  const getSelectedSource = (category: 'body' | 'face') => {
+    const selectedFeature = features[category].find(
+      feature => feature.id === selectedFeatures[category]
+    );
+    return selectedFeature?.source;
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with Preview */}
@@ -120,17 +130,13 @@ const CharCreateScreen = () => {
 
       {/* Avatar Preview Area */}
       <View style={styles.avatarPreview}>
-        <View style={[styles.avatarContainer, { backgroundColor: selectedFeatures.color }]}>
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>Avatar</Text>
-            <Text style={styles.avatarDetails}>
-              Body: {selectedFeatures.body}
-            </Text>
-            <Text style={styles.avatarDetails}>
-              Face: {selectedFeatures.face}
-            </Text>
-          </View>
-        </View>
+        {/* Replace the old avatar container with CharacterRenderer */}
+        <CharacterRenderer
+          selectedColor={selectedFeatures.color}
+          bodySource={getSelectedSource('body')}
+          faceSource={getSelectedSource('face')}
+          size={200}
+        />
         
         {/* Randomize Button */}
         <TouchableOpacity 
@@ -218,37 +224,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     position: 'relative',
   },
-  avatarContainer: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  avatarDetails: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    marginTop: 2,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
   randomizeButton: {
     position: 'absolute',
     bottom: 50,
@@ -323,20 +298,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-  },
-  placeholderImage: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#ECF0F1',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 10,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    fontWeight: '500',
   },
   colorButton: {
     width: 60,
