@@ -1,12 +1,11 @@
 // assets/images/character_sprites/index.ts
-import body1 from './body1.jpg';
-import body2 from './body2.jpg';
-import body3 from './body3.jpg';
-import body4 from './body4.jpg';
-import face1 from './face1.jpg';
-import face2 from './face2.jpg';
-import face3 from './face3.jpg';
-import face4 from './face4.jpg';
+import body1 from './body1.png';
+import body2 from './body2.png';
+import body3 from './body3.png';
+import body4 from './body4.png';
+import face1 from './face1.png';
+import face2 from './face2.png';
+import face3 from './face3.png';
 
 export const characterSprites = {
   body: {
@@ -19,7 +18,6 @@ export const characterSprites = {
     face1,
     face2,
     face3,
-    face4
   }
 };
 
