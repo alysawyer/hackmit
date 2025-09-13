@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
+import { Link } from 'expo-router';
 
 export default function Index() {
   return (
@@ -10,6 +11,17 @@ export default function Index() {
       }}
     >
       <Text>Edit app/index.tsx to edit this screen.</Text>
+      <Link href="/chrcreate" style={styles.button}>
+        Go to Character Creation screen
+      </Link>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    fontSize: 20,
+    textDecorationLine: 'underline',
+    color: '#fff',
+  },
+});
