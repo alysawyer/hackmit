@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { MaterialInput } from './components/MaterialInput';
 import { QuizScreen } from './components/QuizScreen';
+import { SpeechDebugScreen } from './components/SpeechDebugScreen';
 import { ResultsScreen } from './components/ResultsScreen';
 import { FeedbackScreen } from './components/FeedbackScreen';
 import { useGameStore } from './stores/gameStore';
 import { Difficulty } from '../../shared/types';
 
-type AppState = 'landing' | 'input' | 'quiz' | 'results' | 'feedback';
+type AppState = 'landing' | 'input' | 'speech-debug' | 'quiz' | 'results' | 'feedback';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('landing');
@@ -43,8 +44,8 @@ function App() {
           return;
         }
 
-        setQuestions(result.questions);
-        setAppState('quiz');
+  setQuestions(result.questions);
+  setAppState('speech-debug');
       } else {
         const error = await response.json();
         alert(`Failed to generate questions: ${error.error || 'Unknown error'}`);
@@ -96,6 +97,9 @@ function App() {
         />
       )}
       
+      {appState === 'speech-debug' && (
+        <SpeechDebugScreen onContinue={() => setAppState('quiz')} />
+      )}
       {appState === 'quiz' && <QuizScreen />}
       
       {appState === 'results' && (

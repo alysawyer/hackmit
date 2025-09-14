@@ -1,6 +1,6 @@
+
 import React, { useEffect } from 'react';
-import { MicrophoneIcon, StopIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
-import { Mic, MicOff, Play, Square, SkipForward, Clock } from 'lucide-react';
+import { Mic, Square, SkipForward, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Progress } from './ui/progress';
@@ -24,8 +24,23 @@ export function QuizScreen() {
     nextQuestion,
   } = useGameStore();
 
-  const { startAnswering, startThinking } = useTimer();
   const { isListening, startListening, stopListening } = useSpeechRecognition();
+
+  // Timer logic with auto recording callbacks
+  const { startAnswering, startThinking } = useTimer({
+    onAutoStartRecording: () => {
+      if (timerState === 'THINKING') {
+        startAnswering();
+        startListening();
+      }
+    },
+    onAutoStopRecording: () => {
+      if (timerState === 'ANSWERING_ACTIVE' && (isListening || isRecording)) {
+        stopListening();
+        handleSubmitAnswer();
+      }
+    }
+  });
 
   const question = currentQuestion();
   const progress = currentQuestionIndex + 1;
@@ -53,6 +68,7 @@ export function QuizScreen() {
   };
 
   const handleSkipQuestion = () => {
+    if (!question) return;
     // Add a blank entry for skipped question
     const entry = {
       questionId: question.id,
@@ -67,7 +83,7 @@ export function QuizScreen() {
   };
 
   const handleSubmitAnswer = async () => {
-    if (!question || !userAnswer.trim()) return;
+    if (!question || !userAnswer || !userAnswer.trim()) return;
 
     setTimerState('EVALUATING');
 
@@ -141,36 +157,25 @@ export function QuizScreen() {
   }
 
   const getTimerProgress = () => {
-    const maxTime = timerState === 'THINKING' ? 30000 : 30000;
+    const maxTime = timerState === 'THINKING' ? 10000 : 30000;
     return Math.max(0, (timeRemaining / maxTime) * 100);
   };
 
-  const getTimerColor = () => {
-    if (timerState === 'THINKING') return 'bg-blue-500';
-    if (timerState === 'ANSWERING_ACTIVE') {
-      if (answerStartTime && !hasStartedSpeaking) {
-        const timeSinceStart = performance.now() - answerStartTime;
-        return timeSinceStart > 10000 ? 'bg-red-500' : 'bg-orange-500';
-      }
-      return 'bg-green-500';
-    }
-    return 'bg-gray-400';
-  };
+  // getTimerColor is not used in JSX, so remove it to avoid unused error
 
   const getMicButtonState = () => {
     if (timerState === 'THINKING') {
       return {
-        text: 'Start Answering',
-        icon: Play,
+        text: 'Start Recording',
+        icon: Mic,
         variant: 'default' as const,
         disabled: false,
       };
     }
-    
     if (timerState === 'ANSWERING_ACTIVE') {
       if (isListening || isRecording) {
         return {
-          text: 'Stop & Submit',
+          text: 'Stop Recording',
           icon: Square,
           variant: 'destructive' as const,
           disabled: false,
@@ -184,7 +189,6 @@ export function QuizScreen() {
         };
       }
     }
-
     return {
       text: 'Processing...',
       icon: Clock,
@@ -197,7 +201,6 @@ export function QuizScreen() {
     if (timerState === 'THINKING') {
       return 'Think about your answer. Tap the mic to start answering anytime.';
     }
-    
     if (timerState === 'ANSWERING_ACTIVE') {
       if (answerStartTime && !hasStartedSpeaking) {
         const timeSinceStart = performance.now() - answerStartTime;
@@ -208,22 +211,18 @@ export function QuizScreen() {
           return 'Time to start speaking has expired!';
         }
       }
-      
       if (isListening || isRecording) {
         return 'Listening... Speak your answer clearly.';
       } else {
         return 'Tap the mic to start recording your answer.';
       }
     }
-    
     if (timerState === 'EVALUATING') {
       return 'Evaluating your answer...';
     }
-    
     if (timerState === 'SHOWING_RESULT') {
       return 'Moving to next question...';
     }
-    
     return '';
   };
 

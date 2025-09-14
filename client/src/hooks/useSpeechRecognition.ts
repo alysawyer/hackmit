@@ -53,7 +53,6 @@ export function useSpeechRecognition() {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
-      recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
 
       recognition.addEventListener('result', (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
@@ -92,6 +91,7 @@ export function useSpeechRecognition() {
         
         if (fullTranscript && !useGameStore.getState().hasStartedSpeaking) {
           setHasStartedSpeaking(true);
+          console.log('[SPEECH] Detected speech, set hasStartedSpeaking = true');
         }
         
         // Clean up the transcript for better accuracy
@@ -117,9 +117,7 @@ export function useSpeechRecognition() {
       });
 
       recognition.addEventListener('error', (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
         setIsListening(false);
-        
         // Auto-restart on certain errors
         if (event.error === 'network' || event.error === 'aborted') {
           setTimeout(() => {
@@ -141,8 +139,7 @@ export function useSpeechRecognition() {
   }, []);
 
   const startListening = async () => {
-    if (timerState !== 'ANSWERING_ACTIVE') return;
-
+    // Allow listening in any state for debug/test screens
     if (recognitionRef.current && isSupported) {
       // Use browser speech recognition
       try {
@@ -253,7 +250,7 @@ export function useSpeechRecognition() {
             speechDetected = true;
             if (!useGameStore.getState().hasStartedSpeaking) {
               setHasStartedSpeaking(true);
-              console.log('Speech detected via audio level');
+              console.log('[SPEECH] Detected speech via audio level, set hasStartedSpeaking = true');
             }
           }
         }
