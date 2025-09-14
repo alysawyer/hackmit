@@ -34,6 +34,8 @@ export const EvalResponseSchema = z.object({
   verdict: z.enum(['CORRECT', 'INCORRECT']),
   briefFeedback: z.string().max(200),
   wrongSpans: z.array(WrongSpanSchema).optional(),
+  correctAnswer: z.string().optional(),
+  explanation: z.string().optional(),
 });
 
 // Transcript and summary schemas
@@ -43,6 +45,8 @@ export const TranscriptEntrySchema = z.object({
   userAnswer: z.string(),
   verdict: z.enum(['CORRECT', 'INCORRECT']),
   briefFeedback: z.string().optional(),
+  correctAnswer: z.string().optional(),
+  explanation: z.string().optional(),
 });
 
 export const GameSummarySchema = z.object({

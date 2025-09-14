@@ -1,76 +1,76 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../stores/gameStore';
 
-const THINK_TIME = 30000; // 30 seconds
-const ANSWER_TIME = 30000; // 30 seconds  
-const SPEECH_START_WINDOW = 10000; // 10 seconds
+const ANSWER_TIME = 30000; // 30 seconds max for answering
 
-export function useTimer() {
+export function useTimer({
+  onAutoStopRecording
+}: {
+  onAutoStopRecording?: () => void;
+} = {}) {
   const frameRef = useRef<number>();
   const lastTimestampRef = useRef<number>();
   const {
     timerState,
-    timeRemaining,
     answerStartTime,
-    hasStartedSpeaking,
+    respondingStarted,
     setTimerState,
     setTimeRemaining,
+    setRespondingStarted,
+    setSpeechDetected,
+    setUserAnswer,
     addTranscriptEntry,
     nextQuestion,
-    currentQuestion,
+    currentQuestion
   } = useGameStore();
 
   const stopTimer = () => {
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
       frameRef.current = undefined;
+      console.log('[TIMER] Timer stopped');
     }
     lastTimestampRef.current = undefined;
   };
 
+  // Only update timer every 1 second
+  const accumRef = useRef(0);
   const tick = (timestamp: number) => {
     if (!lastTimestampRef.current) {
       lastTimestampRef.current = timestamp;
     }
-
     const deltaTime = timestamp - lastTimestampRef.current;
     lastTimestampRef.current = timestamp;
+    accumRef.current += deltaTime;
 
-    const newTimeRemaining = Math.max(0, timeRemaining - deltaTime);
-    setTimeRemaining(newTimeRemaining);
+    // Only update every 1 second
+    if (accumRef.current >= 1000) {
+      let secondsElapsed = Math.floor(accumRef.current / 1000);
+      accumRef.current = accumRef.current % 1000;
+      // Always get the latest value from the store to avoid closure issues
+      const currentTimeRemaining = useGameStore.getState().timeRemaining;
+      const newTime = Math.max(0, currentTimeRemaining - secondsElapsed * 1000);
+      console.log('[TIMER] Updating timeRemaining:', newTime);
+      setTimeRemaining(newTime);
+    }
 
-    // Handle state transitions based on timer
-    if (newTimeRemaining <= 0) {
-      if (timerState === 'THINKING') {
-        // Auto-start answer phase
-        setTimerState('ANSWERING_ACTIVE');
-        setTimeRemaining(ANSWER_TIME);
-        useGameStore.getState().setAnswerStartTime(performance.now());
-      } else if (timerState === 'ANSWERING_ACTIVE') {
-        // Time's up for answering
+    // Responding State: 30s max
+    if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
+      const timeSinceAnswerStart = performance.now() - (answerStartTime || 0);
+      if (timeSinceAnswerStart > ANSWER_TIME) {
+        if (onAutoStopRecording) onAutoStopRecording();
         handleAnswerTimeout();
         return;
       }
-    }
-
-    // Check for speech start timeout during answering
-    if (timerState === 'ANSWERING_ACTIVE' && answerStartTime) {
-      const timeSinceAnswerStart = performance.now() - answerStartTime;
-      if (timeSinceAnswerStart > SPEECH_START_WINDOW && !hasStartedSpeaking) {
-        // Auto-fail for not speaking within 10 seconds
-        handleNoSpeechFail();
-        return;
-      }
-    }
-
-    // Continue timer if still running
-    if (newTimeRemaining > 0 && (timerState === 'THINKING' || timerState === 'ANSWERING_ACTIVE')) {
       frameRef.current = requestAnimationFrame(tick);
+      return;
     }
   };
 
   const handleAnswerTimeout = () => {
     stopTimer();
+    setRespondingStarted(false);
+    setSpeechDetected(false);
     const question = currentQuestion();
     if (question) {
       const entry = {
@@ -82,70 +82,39 @@ export function useTimer() {
       };
       addTranscriptEntry(entry);
     }
-    
+    setUserAnswer(''); // Clear transcript for next question
     setTimerState('SHOWING_RESULT');
     setTimeout(() => {
       nextQuestion();
     }, 1500);
   };
 
-  const handleNoSpeechFail = () => {
-    stopTimer();
-    const question = currentQuestion();
-    if (question) {
-      const entry = {
-        questionId: question.id,
-        questionPrompt: question.prompt,
-        userAnswer: '',
-        verdict: 'INCORRECT' as const,
-        briefFeedback: 'No answer detected within 10s.',
-      };
-      addTranscriptEntry(entry);
-    }
-    
-    setTimerState('SHOWING_RESULT');
-    setTimeout(() => {
-      nextQuestion();
-    }, 1500);
-  };
 
   const startTimer = () => {
-    if (timerState === 'THINKING' || timerState === 'ANSWERING_ACTIVE') {
-      stopTimer();
-      frameRef.current = requestAnimationFrame(tick);
-    }
+  stopTimer();
+  console.log('[TIMER] Timer started');
+  frameRef.current = requestAnimationFrame(tick);
   };
 
-  const startAnswering = () => {
-    if (timerState === 'THINKING') {
-      stopTimer();
-      setTimerState('ANSWERING_ACTIVE');
-      setTimeRemaining(ANSWER_TIME);
-      useGameStore.getState().setAnswerStartTime(performance.now());
-      frameRef.current = requestAnimationFrame(tick);
-    }
-  };
-
-  const startThinking = () => {
+  // Only one state: Responding
+  const startResponding = () => {
     stopTimer();
-    setTimerState('THINKING');
-    setTimeRemaining(THINK_TIME);
-    useGameStore.getState().setAnswerStartTime(null);
-    useGameStore.getState().setHasStartedSpeaking(false);
-    useGameStore.getState().setUserAnswer('');
+    setTimerState('ANSWERING_ACTIVE');
+    setRespondingStarted(true);
+    setSpeechDetected(false);
+    setUserAnswer(''); // Clear transcript for new answer
     frameRef.current = requestAnimationFrame(tick);
   };
 
   // Start timer when state changes to THINKING or ANSWERING_ACTIVE
   useEffect(() => {
-    if (timerState === 'THINKING' || timerState === 'ANSWERING_ACTIVE') {
+    if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
       startTimer();
     } else {
       stopTimer();
     }
-
     return () => stopTimer();
-  }, [timerState]);
+  }, [timerState, respondingStarted]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -153,8 +122,7 @@ export function useTimer() {
   }, []);
 
   return {
-    startAnswering,
-    startThinking,
+    startResponding,
     stopTimer,
   };
 }

@@ -10,10 +10,13 @@ router.post('/', validateBody(EvalRequestSchema), async (req, res) => {
     const { questionPrompt, userAnswer, materialContext } = req.body;
     
     // Handle empty or very short answers
+
     if (!userAnswer || userAnswer.trim().length < 2) {
       return res.json({
         verdict: 'INCORRECT',
         briefFeedback: 'Answer too short or empty.',
+        correctAnswer: undefined,
+        explanation: 'Please provide a more complete answer.',
       });
     }
 

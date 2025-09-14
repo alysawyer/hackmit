@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  CheckCircleIcon, 
-  XCircleIcon, 
-  ArrowLeftIcon,
-  ChevronDownIcon,
-  ChevronUpIcon 
-} from '@heroicons/react/24/solid';
-import { 
   CheckCircle, 
   XCircle, 
   ArrowLeft, 
@@ -140,12 +133,18 @@ export function FeedbackScreen({ onBack, onRestart }: FeedbackScreenProps) {
               {summary.transcript.map((entry, index) => {
                 const isExpanded = expandedItems.has(entry.questionId);
                 const isCorrect = entry.verdict === 'CORRECT';
+                // Consider skipped/timed-out if userAnswer is missing or '[Skipped]'
+                const isSkippedOrTimeout = !entry.userAnswer || entry.userAnswer === '[Skipped]';
 
                 return (
                   <Card
                     key={entry.questionId}
                     className={`transition-all ${
-                      isCorrect ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/50'
+                      isCorrect
+                        ? 'border-green-200 bg-green-50/50'
+                        : isSkippedOrTimeout
+                          ? 'border-gray-300 bg-gray-50/70'
+                          : 'border-red-200 bg-red-50/50'
                     }`}
                   >
                     {/* Question Header */}
@@ -156,6 +155,8 @@ export function FeedbackScreen({ onBack, onRestart }: FeedbackScreenProps) {
                       <div className="flex items-center space-x-3">
                         {isCorrect ? (
                           <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : isSkippedOrTimeout ? (
+                          <XCircle className="w-5 h-5 text-gray-400" />
                         ) : (
                           <XCircle className="w-5 h-5 text-red-600" />
                         )}
@@ -171,11 +172,13 @@ export function FeedbackScreen({ onBack, onRestart }: FeedbackScreenProps) {
                       
                       <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          isCorrect 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                          isCorrect
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                            : isSkippedOrTimeout
+                              ? 'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-300'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
                         }`}>
-                          {entry.verdict}
+                          {isSkippedOrTimeout ? 'SKIPPED' : entry.verdict}
                         </span>
                         {isExpanded ? (
                           <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -229,8 +232,31 @@ export function FeedbackScreen({ onBack, onRestart }: FeedbackScreenProps) {
                             </div>
                           )}
 
-                          {/* Improvement Tips for Wrong Answers */}
-                          {!isCorrect && (
+                          {/* Show correct answer for all questions if present */}
+                          {entry.correctAnswer && (
+                            <div className="space-y-2">
+                              <div>
+                                <h4 className="text-sm font-medium text-foreground mb-2">Correct Answer:</h4>
+                                <div className="bg-green-100 text-green-900 p-3 rounded-lg border border-green-200">
+                                  {entry.correctAnswer}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Show explanation for incorrect answers if present */}
+                          {!isCorrect && entry.explanation && (
+                            <div className="space-y-2">
+                              <div>
+                                <h4 className="text-sm font-medium text-foreground mb-2">Explanation:</h4>
+                                <div className="bg-yellow-50 text-yellow-900 p-3 rounded-lg border border-yellow-200">
+                                  {entry.explanation}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Improvement Tips for Wrong Answers (not for skipped/timed-out) */}
+                          {!isCorrect && !isSkippedOrTimeout && (
                             <div>
                               <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                                 <Lightbulb className="w-4 h-4" />

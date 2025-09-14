@@ -32,7 +32,9 @@ export interface GameState {
   // Current question state
   userAnswer: string;
   isRecording: boolean;
-  hasStartedSpeaking: boolean;
+  waitingStarted: boolean;
+  respondingStarted: boolean;
+  speechDetected: boolean;
   
   // Results
   transcript: TranscriptEntry[];
@@ -49,7 +51,9 @@ export interface GameState {
   setAnswerStartTime: (time: number | null) => void;
   setUserAnswer: (answer: string) => void;
   setIsRecording: (recording: boolean) => void;
-  setHasStartedSpeaking: (started: boolean) => void;
+  setWaitingStarted: (started: boolean) => void;
+  setRespondingStarted: (started: boolean) => void;
+  setSpeechDetected: (detected: boolean) => void;
   addTranscriptEntry: (entry: TranscriptEntry) => void;
   nextQuestion: () => void;
   completeGame: () => void;
@@ -72,7 +76,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   answerStartTime: null,
   userAnswer: '',
   isRecording: false,
-  hasStartedSpeaking: false,
+  waitingStarted: false,
+  respondingStarted: false,
+  speechDetected: false,
   transcript: [],
   isGameComplete: false,
   showFeedback: false,
@@ -87,7 +93,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     isGameComplete: false,
   }),
   
-  setTimerState: (timerState) => set({ timerState }),
+  setTimerState: (timerState) => set((state) => {
+    if (timerState === 'ANSWERING_ACTIVE' && state.timerState !== 'ANSWERING_ACTIVE') {
+      return {
+        timerState,
+        timeRemaining: 30000,
+        answerStartTime: performance.now(),
+      };
+    }
+    return { timerState };
+  }),
   
   setTimeRemaining: (timeRemaining) => set({ timeRemaining }),
   
@@ -97,7 +112,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   setIsRecording: (isRecording) => set({ isRecording }),
   
-  setHasStartedSpeaking: (hasStartedSpeaking) => set({ hasStartedSpeaking }),
+  setWaitingStarted: (waitingStarted) => set({ waitingStarted }),
+  setRespondingStarted: (respondingStarted) => set({ respondingStarted }),
+  setSpeechDetected: (speechDetected) => set({ speechDetected }),
   
   addTranscriptEntry: (entry) => set((state) => ({
     transcript: [...state.transcript, entry],
@@ -110,16 +127,20 @@ export const useGameStore = create<GameState>((set, get) => ({
         isGameComplete: true,
         timerState: 'IDLE',
         userAnswer: '',
-        hasStartedSpeaking: false,
+        waitingStarted: false,
+        respondingStarted: false,
+        speechDetected: false,
         answerStartTime: null,
       };
     }
     return {
       currentQuestionIndex: nextIndex,
-      timerState: 'THINKING',
+      timerState: 'IDLE',
       timeRemaining: 30000,
       userAnswer: '',
-      hasStartedSpeaking: false,
+      waitingStarted: false,
+      respondingStarted: false,
+      speechDetected: false,
       answerStartTime: null,
     };
   }),
@@ -128,7 +149,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     isGameComplete: true,
     timerState: 'IDLE',
     userAnswer: '',
-    hasStartedSpeaking: false,
+  waitingStarted: false,
+  respondingStarted: false,
+  speechDetected: false,
     answerStartTime: null,
   }),
   
@@ -142,7 +165,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     answerStartTime: null,
     userAnswer: '',
     isRecording: false,
-    hasStartedSpeaking: false,
+  waitingStarted: false,
+  respondingStarted: false,
+  speechDetected: false,
     transcript: [],
     isGameComplete: false,
     showFeedback: false,

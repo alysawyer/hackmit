@@ -38,7 +38,7 @@ export function useSpeechRecognition() {
   
   const { 
     setUserAnswer, 
-    setHasStartedSpeaking, 
+    setSpeechDetected, 
     timerState,
     setIsRecording 
   } = useGameStore();
@@ -53,7 +53,6 @@ export function useSpeechRecognition() {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
-      recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
 
       recognition.addEventListener('result', (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
@@ -90,8 +89,9 @@ export function useSpeechRecognition() {
 
         const fullTranscript = (finalTranscript + interimTranscript).trim();
         
-        if (fullTranscript && !useGameStore.getState().hasStartedSpeaking) {
-          setHasStartedSpeaking(true);
+        if (fullTranscript && !useGameStore.getState().speechDetected) {
+          setSpeechDetected(true);
+          console.log('[SPEECH] Detected speech, set speechDetected = true');
         }
         
         // Clean up the transcript for better accuracy
@@ -117,9 +117,7 @@ export function useSpeechRecognition() {
       });
 
       recognition.addEventListener('error', (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
         setIsListening(false);
-        
         // Auto-restart on certain errors
         if (event.error === 'network' || event.error === 'aborted') {
           setTimeout(() => {
@@ -141,8 +139,7 @@ export function useSpeechRecognition() {
   }, []);
 
   const startListening = async () => {
-    if (timerState !== 'ANSWERING_ACTIVE') return;
-
+    // Allow listening in any state for debug/test screens
     if (recognitionRef.current && isSupported) {
       // Use browser speech recognition
       try {
@@ -212,8 +209,8 @@ export function useSpeechRecognition() {
             const result = await response.json();
             const transcript = result.transcript?.trim() || '';
             
-            if (transcript && !useGameStore.getState().hasStartedSpeaking) {
-              setHasStartedSpeaking(true);
+            if (transcript && !useGameStore.getState().speechDetected) {
+              setSpeechDetected(true);
             }
             
             setUserAnswer(transcript);
@@ -251,9 +248,9 @@ export function useSpeechRecognition() {
           
           if (!speechDetected) {
             speechDetected = true;
-            if (!useGameStore.getState().hasStartedSpeaking) {
-              setHasStartedSpeaking(true);
-              console.log('Speech detected via audio level');
+            if (!useGameStore.getState().speechDetected) {
+              setSpeechDetected(true);
+              console.log('[SPEECH] Detected speech via audio level, set speechDetected = true');
             }
           }
         }
