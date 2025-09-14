@@ -72,6 +72,7 @@ export function useTimer({
       };
       addTranscriptEntry(entry);
     }
+    setUserAnswer(''); // Clear transcript for next question
     setTimerState('SHOWING_RESULT');
     setTimeout(() => {
       nextQuestion();

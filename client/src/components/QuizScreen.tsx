@@ -9,24 +9,22 @@ import { useTimer } from '../hooks/useTimer';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 export function QuizScreen() {
-  const {
-    questions,
-    currentQuestionIndex,
-    timerState,
-    timeRemaining,
-    userAnswer,
-    answerStartTime,
-    respondingStarted,
-    speechDetected,
-    isRecording,
-    currentQuestion,
-    setTimerState,
-    setRespondingStarted,
-    setSpeechDetected,
-    setUserAnswer,
-    addTranscriptEntry,
-    nextQuestion,
-  } = useGameStore();
+  const questions = useGameStore(state => state.questions);
+  const currentQuestionIndex = useGameStore(state => state.currentQuestionIndex);
+  const timerState = useGameStore(state => state.timerState);
+  const timeRemaining = useGameStore(state => state.timeRemaining);
+  const userAnswer = useGameStore(state => state.userAnswer);
+  const answerStartTime = useGameStore(state => state.answerStartTime);
+  const respondingStarted = useGameStore(state => state.respondingStarted);
+  const speechDetected = useGameStore(state => state.speechDetected);
+  const isRecording = useGameStore(state => state.isRecording);
+  const currentQuestion = useGameStore(state => state.currentQuestion);
+  const setTimerState = useGameStore(state => state.setTimerState);
+  const setRespondingStarted = useGameStore(state => state.setRespondingStarted);
+  const setSpeechDetected = useGameStore(state => state.setSpeechDetected);
+  const setUserAnswer = useGameStore(state => state.setUserAnswer);
+  const addTranscriptEntry = useGameStore(state => state.addTranscriptEntry);
+  const nextQuestion = useGameStore(state => state.nextQuestion);
 
   const { isListening, startListening, stopListening } = useSpeechRecognition();
 
@@ -44,22 +42,16 @@ export function QuizScreen() {
   const progress = currentQuestionIndex + 1;
   const total = questions.length;
 
-  // Reset for every question
+  // Start timer for every question
   useEffect(() => {
-    // No auto-start, user must click mic to begin
-    setRespondingStarted(false);
+    setRespondingStarted(true);
     setSpeechDetected(false);
     setUserAnswer('');
+    startResponding();
   }, [currentQuestionIndex, questions.length]);
 
   const handleMicClick = () => {
-    if (timerState !== 'ANSWERING_ACTIVE' && !respondingStarted) {
-      setRespondingStarted(true);
-      setSpeechDetected(false);
-      setUserAnswer(''); // Clear transcript for new answer
-      startResponding();
-      startListening();
-    } else if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
+    if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
       if (isListening || isRecording) {
         stopListening();
         handleSubmitAnswer();
@@ -166,7 +158,7 @@ export function QuizScreen() {
   // getTimerColor is not used in JSX, so remove it to avoid unused error
 
   const getMicButtonState = () => {
-    if (timerState === 'THINKING') {
+    if (timerState === 'IDLE' || timerState === 'THINKING') {
       return {
         text: 'Start Recording',
         icon: Mic,
