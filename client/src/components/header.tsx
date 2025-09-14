@@ -1,97 +1,57 @@
 import { Button } from "@/components/ui/button"
-import { Mic, Menu } from "lucide-react"
-import { useState } from "react"
-import { Cross2Icon } from "@radix-ui/react-icons"
+import { Mic } from "lucide-react"
 
-export function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+interface HeaderProps {
+  onStartQuiz: () => void;
+}
 
+export function Header({ onStartQuiz }: HeaderProps) {
   return (
-    <header className="fixed top-0 z-50 w-full bg-background border-b-4 border-primary">
-      <div className="container">
-        <div className="flex h-20 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary flex items-center justify-center geometric-shape">
-              <Mic className="h-6 w-6 text-primary-foreground" />
+    <header className="w-full bg-background/80 backdrop-blur-sm border-b border-border/50">
+      <div className="container mx-auto px-6">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent flex items-center justify-center rounded-lg">
+              <Mic className="h-4 w-4 text-white" />
             </div>
-            <div>
-              <span className="text-2xl font-black text-foreground tracking-tight">VOICE</span>
-              <span className="text-2xl font-black text-primary">LEARN</span>
-            </div>
+            <span
+              className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent cursor-pointer"
+            >
+              VoiceLearn
+            </span>
           </div>
 
-          <nav className="hidden lg:block">
-            <div className="flex gap-2">
-              <a
-                href="#features"
-                className="px-4 py-2 bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground font-mono text-sm uppercase transition-all"
-              >
-                FEATURES
-              </a>
-              <a
-                href="#testimonials"
-                className="px-4 py-2 bg-muted text-muted-foreground hover:bg-secondary hover:text-secondary-foreground font-mono text-sm uppercase transition-all"
-              >
-                REVIEWS
-              </a>
-              <a
-                href="#pricing"
-                className="px-4 py-2 bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground font-mono text-sm uppercase transition-all"
-              >
-                PRICING
-              </a>
-              <a
-                href="#about"
-                className="px-4 py-2 bg-muted text-muted-foreground hover:bg-destructive hover:text-destructive-foreground font-mono text-sm uppercase transition-all"
-              >
-                ABOUT
-              </a>
-            </div>
+          <nav className="hidden md:flex items-center gap-8">
+            <a
+              href="#features"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
+            >
+              Features
+            </a>
+            <a href="#about" className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
+              About
+            </a>
+            <button
+              onClick={onStartQuiz}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium cursor-pointer"
+            >
+              Quiz
+            </button>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden sm:inline-flex border-2 border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground font-bold uppercase bg-transparent"
-            >
-              SIGN IN
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="hover:text-primary">
+              Sign In
             </Button>
-            <Button
-              size="sm"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wider glow-effect"
+            <Button 
+              size="sm" 
+              className="bg-primary/80 hover:bg-primary text-primary-foreground border-0"
+              onClick={onStartQuiz}
             >
-              START NOW
-            </Button>
-
-            {/* Mobile menu button */}
-            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <Cross2Icon className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              Get Started
             </Button>
           </div>
         </div>
-
-        {isMenuOpen && (
-          <div className="lg:hidden border-t-2 border-primary bg-card p-4">
-            <div className="space-y-2">
-              <a href="#features" className="block px-4 py-3 bg-primary text-primary-foreground font-mono uppercase">
-                FEATURES
-              </a>
-              <a
-                href="#testimonials"
-                className="block px-4 py-3 bg-secondary text-secondary-foreground font-mono uppercase"
-              >
-                REVIEWS
-              </a>
-              <a href="#pricing" className="block px-4 py-3 bg-accent text-accent-foreground font-mono uppercase">
-                PRICING
-              </a>
-              <a href="#about" className="block px-4 py-3 bg-muted text-muted-foreground font-mono uppercase">
-                ABOUT
-              </a>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   )

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LandingPage } from './components/LandingPage';
 import { MaterialInput } from './components/MaterialInput';
 import { QuizScreen } from './components/QuizScreen';
 import { ResultsScreen } from './components/ResultsScreen';
@@ -6,10 +7,10 @@ import { FeedbackScreen } from './components/FeedbackScreen';
 import { useGameStore } from './stores/gameStore';
 import { Difficulty } from '../../shared/types';
 
-type AppState = 'input' | 'quiz' | 'results' | 'feedback';
+type AppState = 'landing' | 'input' | 'quiz' | 'results' | 'feedback';
 
 function App() {
-  const [appState, setAppState] = useState<AppState>('input');
+  const [appState, setAppState] = useState<AppState>('landing');
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   
   const { 
@@ -56,6 +57,10 @@ function App() {
     }
   };
 
+  const handleStartQuiz = () => {
+    setAppState('input');
+  };
+
   const handleRestart = () => {
     resetGame();
     setAppState('input');
@@ -80,6 +85,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {appState === 'landing' && (
+        <LandingPage onStartQuiz={handleStartQuiz} />
+      )}
+      
       {appState === 'input' && (
         <MaterialInput 
           onSubmit={handleMaterialSubmit}
