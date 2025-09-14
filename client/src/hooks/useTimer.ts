@@ -12,37 +12,47 @@ export function useTimer({
   const lastTimestampRef = useRef<number>();
   const {
     timerState,
-    timeRemaining,
     answerStartTime,
-  respondingStarted,
-  setTimerState,
-  setTimeRemaining,
-  setRespondingStarted,
-  setSpeechDetected,
-  setUserAnswer,
-  addTranscriptEntry,
-  nextQuestion,
-  currentQuestion
+    respondingStarted,
+    setTimerState,
+    setTimeRemaining,
+    setRespondingStarted,
+    setSpeechDetected,
+    setUserAnswer,
+    addTranscriptEntry,
+    nextQuestion,
+    currentQuestion
   } = useGameStore();
 
   const stopTimer = () => {
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
       frameRef.current = undefined;
+      console.log('[TIMER] Timer stopped');
     }
     lastTimestampRef.current = undefined;
   };
 
+  // Only update timer every 1 second
+  const accumRef = useRef(0);
   const tick = (timestamp: number) => {
     if (!lastTimestampRef.current) {
       lastTimestampRef.current = timestamp;
     }
-
     const deltaTime = timestamp - lastTimestampRef.current;
     lastTimestampRef.current = timestamp;
+    accumRef.current += deltaTime;
 
-    let newTimeRemaining = Math.max(0, timeRemaining - deltaTime);
-    setTimeRemaining(newTimeRemaining);
+    // Only update every 1 second
+    if (accumRef.current >= 1000) {
+      let secondsElapsed = Math.floor(accumRef.current / 1000);
+      accumRef.current = accumRef.current % 1000;
+      // Always get the latest value from the store to avoid closure issues
+      const currentTimeRemaining = useGameStore.getState().timeRemaining;
+      const newTime = Math.max(0, currentTimeRemaining - secondsElapsed * 1000);
+      console.log('[TIMER] Updating timeRemaining:', newTime);
+      setTimeRemaining(newTime);
+    }
 
     // Responding State: 30s max
     if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
@@ -81,19 +91,18 @@ export function useTimer({
 
 
   const startTimer = () => {
-    stopTimer();
-    frameRef.current = requestAnimationFrame(tick);
+  stopTimer();
+  console.log('[TIMER] Timer started');
+  frameRef.current = requestAnimationFrame(tick);
   };
 
   // Only one state: Responding
   const startResponding = () => {
     stopTimer();
     setTimerState('ANSWERING_ACTIVE');
-    setTimeRemaining(ANSWER_TIME);
     setRespondingStarted(true);
     setSpeechDetected(false);
     setUserAnswer(''); // Clear transcript for new answer
-    useGameStore.getState().setAnswerStartTime(performance.now());
     frameRef.current = requestAnimationFrame(tick);
   };
 

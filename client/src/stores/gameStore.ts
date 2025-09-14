@@ -93,7 +93,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     isGameComplete: false,
   }),
   
-  setTimerState: (timerState) => set({ timerState }),
+  setTimerState: (timerState) => set((state) => {
+    if (timerState === 'ANSWERING_ACTIVE' && state.timerState !== 'ANSWERING_ACTIVE') {
+      return {
+        timerState,
+        timeRemaining: 30000,
+        answerStartTime: performance.now(),
+      };
+    }
+    return { timerState };
+  }),
   
   setTimeRemaining: (timeRemaining) => set({ timeRemaining }),
   

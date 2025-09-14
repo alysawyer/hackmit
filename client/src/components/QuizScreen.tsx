@@ -42,16 +42,20 @@ export function QuizScreen() {
   const progress = currentQuestionIndex + 1;
   const total = questions.length;
 
-  // Start timer for every question
+  // Reset state for every question
   useEffect(() => {
-    setRespondingStarted(true);
+    setRespondingStarted(false);
     setSpeechDetected(false);
     setUserAnswer('');
-    startResponding();
   }, [currentQuestionIndex, questions.length]);
 
   const handleMicClick = () => {
-    if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
+    if (timerState !== 'ANSWERING_ACTIVE' && !respondingStarted) {
+      setSpeechDetected(false);
+      setUserAnswer('');
+      startResponding();
+      startListening();
+    } else if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
       if (isListening || isRecording) {
         stopListening();
         handleSubmitAnswer();
