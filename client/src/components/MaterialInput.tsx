@@ -1,5 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { DocumentTextIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, ArrowUpTrayIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { Upload, FileText, Play } from 'lucide-react';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { extractTextFromPDF } from '../utils/pdfParser';
 import { useGameStore } from '../stores/gameStore';
 import { Difficulty } from '../../../shared/types';
@@ -75,132 +78,159 @@ export function MaterialInput({ onSubmit, isLoading = false }: MaterialInputProp
   const canSubmit = textInput.trim().length >= 100 && !isLoading && !isProcessingPDF;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="card p-8">
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">
-          Voice Quiz Game
-        </h1>
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="text-center pb-6">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Create Your Quiz
+          </CardTitle>
+          <p className="text-muted-foreground mt-2">
+            Upload your study material and we'll generate personalized quiz questions
+          </p>
+        </CardHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PDF Upload Area */}
-          <div className="space-y-4">
-            <label className="block text-sm font-medium text-gray-700">
-              Study Material
-            </label>
-            
-            <div
-              className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                isDragOver
-                  ? 'border-primary-400 bg-primary-50'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* PDF Upload Area */}
+            <div className="space-y-4">
+              <div
+                className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
+                  isDragOver
+                    ? 'border-primary bg-primary/5 scale-105'
+                    : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {isProcessingPDF ? (
+                  <div className="space-y-3">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-sm text-muted-foreground">Processing PDF...</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Drop your PDF here
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      or click to browse files
+                    </p>
+                    
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileSelect}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={isProcessingPDF || isLoading}
+                    />
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isProcessingPDF || isLoading}
+                      className="pointer-events-none"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Choose PDF File
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Text Input */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border"></div>
+                <span className="text-sm text-muted-foreground">Or paste text directly</span>
+                <div className="h-px flex-1 bg-border"></div>
+              </div>
               
-              {isProcessingPDF ? (
-                <div className="space-y-2">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full mx-auto"></div>
-                  <p className="text-sm text-gray-600">Processing PDF...</p>
+              <div className="space-y-2">
+                <textarea
+                  id="material-text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="Paste your study material here (minimum 100 characters)..."
+                  className="w-full h-40 px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary resize-none transition-colors"
+                  disabled={isProcessingPDF || isLoading}
+                />
+                <div className="flex items-center justify-between">
+                  <p className={`text-sm ${
+                    textInput.length >= 100 ? 'text-green-600' : 'text-muted-foreground'
+                  }`}>
+                    {textInput.length >= 100 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckIcon className="w-4 h-4" />
+                        Ready to generate questions
+                      </span>
+                    ) : (
+                      `${textInput.length}/100 characters (minimum required)`
+                    )}
+                  </p>
                 </div>
-              ) : (
-                <>
-                  <p className="text-lg font-medium text-gray-900 mb-2">
-                    Drop a PDF file here
-                  </p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    or click to browse files
-                  </p>
-                  
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileSelect}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    disabled={isProcessingPDF || isLoading}
-                  />
-                  
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={isProcessingPDF || isLoading}
+              </div>
+            </div>
+
+            {/* Difficulty Selection */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground">
+                Difficulty Level
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {(['easy', 'medium', 'hard'] as const).map((level) => (
+                  <label 
+                    key={level} 
+                    className={`relative flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-all ${
+                      difficulty === level
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                    }`}
                   >
-                    <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
-                    Choose PDF File
-                  </button>
-                </>
-              )}
+                    <input
+                      type="radio"
+                      name="difficulty"
+                      value={level}
+                      checked={difficulty === level}
+                      onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+                      className="sr-only"
+                      disabled={isLoading || isProcessingPDF}
+                    />
+                    <span className="text-sm font-medium capitalize">
+                      {level}
+                    </span>
+                    {difficulty === level && (
+                      <CheckIcon className="w-4 h-4 ml-2" />
+                    )}
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Text Input */}
-          <div className="space-y-2">
-            <label htmlFor="material-text" className="block text-sm font-medium text-gray-700">
-              Or paste text directly
-            </label>
-            <textarea
-              id="material-text"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Paste your study material here (minimum 100 characters)..."
-              className="w-full h-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 resize-none"
-              disabled={isProcessingPDF || isLoading}
-            />
-            <p className="text-sm text-gray-500">
-              Characters: {textInput.length} (minimum 100 required)
-            </p>
-          </div>
-
-          {/* Difficulty Selection */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Difficulty Level
-            </label>
-            <div className="flex space-x-4">
-              {(['easy', 'medium', 'hard'] as const).map((level) => (
-                <label key={level} className="flex items-center">
-                  <input
-                    type="radio"
-                    name="difficulty"
-                    value={level}
-                    checked={difficulty === level}
-                    onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                    disabled={isLoading || isProcessingPDF}
-                  />
-                  <span className="ml-2 text-sm font-medium text-gray-900 capitalize">
-                    {level}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="pt-4">
-            <button
+            {/* Submit Button */}
+            <Button
               type="submit"
               disabled={!canSubmit}
-              className={`w-full btn text-lg py-3 ${
-                canSubmit 
-                  ? 'btn-primary' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              className="w-full h-12 text-base"
+              size="lg"
             >
               {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                   Generating Questions...
-                </div>
+                </>
               ) : (
-                'Generate Quiz Questions'
+                <>
+                  <Play className="w-5 h-5 mr-2" />
+                  Start Quiz
+                </>
               )}
-            </button>
-          </div>
-        </form>
-      </div>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

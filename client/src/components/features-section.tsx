@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mic, Upload, Brain, BarChart3, Users, Zap } from "lucide-react"
-import { ArrowRightIcon } from "@radix-ui/react-icons"
+import { Mic, Upload, Brain, BarChart3, Users, Zap, ArrowRight } from "lucide-react"
 
 const features = [
   {
@@ -47,7 +46,11 @@ const features = [
   },
 ]
 
-export function FeaturesSection() {
+interface FeaturesSectionProps {
+  onStartQuiz: () => void;
+}
+
+export function FeaturesSection({ onStartQuiz }: FeaturesSectionProps) {
   return (
     <section id="features" className="py-32 bg-background relative overflow-hidden">
       <div className="absolute inset-0">
@@ -94,7 +97,7 @@ export function FeaturesSection() {
 
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className={`text-${feature.color} font-mono text-sm uppercase`}>LEARN MORE</span>
-                  <ArrowRightIcon className={`h-4 w-4 text-${feature.color}`} />
+                  <ArrowRight className={`h-4 w-4 text-${feature.color}`} />
                 </div>
               </CardContent>
             </Card>
@@ -106,7 +109,10 @@ export function FeaturesSection() {
             <h3 className="text-2xl font-black uppercase mb-4">READY TO START?</h3>
             <p className="font-mono mb-6">Join thousands of students already learning smarter.</p>
             <div className="flex gap-4 justify-center">
-              <button className="px-6 py-3 bg-secondary text-secondary-foreground font-bold uppercase hover:bg-secondary/90 transition-colors">
+              <button 
+                className="px-6 py-3 bg-secondary text-secondary-foreground font-bold uppercase hover:bg-secondary/90 transition-colors"
+                onClick={onStartQuiz}
+              >
                 TRY FREE
               </button>
               <button className="px-6 py-3 bg-accent text-accent-foreground font-bold uppercase hover:bg-accent/90 transition-colors">

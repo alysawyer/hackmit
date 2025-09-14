@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Mic } from "lucide-react"
-import { ArrowRightIcon } from "@radix-ui/react-icons"
+import { Mic, ArrowRight } from "lucide-react"
 
-export function CTASection() {
+interface CTASectionProps {
+  onStartQuiz: () => void;
+}
+
+export function CTASection({ onStartQuiz }: CTASectionProps) {
   return (
     <section className="py-20 bg-primary/5">
       <div className="container">
@@ -20,9 +23,13 @@ export function CTASection() {
               and engaging.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90">
+              <Button 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90"
+                onClick={onStartQuiz}
+              >
                 Start Learning Today
-                <ArrowRightIcon className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button variant="outline" size="lg">
                 Schedule a Demo

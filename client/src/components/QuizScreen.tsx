@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
 import { MicrophoneIcon, StopIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
+import { Mic, MicOff, Play, Square, SkipForward, Clock } from 'lucide-react';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader } from './ui/card';
+import { Progress } from './ui/progress';
 import { useGameStore } from '../stores/gameStore';
 import { useTimer } from '../hooks/useTimer';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
@@ -125,11 +129,13 @@ export function QuizScreen() {
 
   if (!question) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="card p-8 text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading questions...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="w-full max-w-2xl">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-muted-foreground">Loading questions...</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -155,8 +161,8 @@ export function QuizScreen() {
     if (timerState === 'THINKING') {
       return {
         text: 'Start Answering',
-        icon: MicrophoneIcon,
-        className: 'btn-primary text-lg px-8 py-4',
+        icon: Play,
+        variant: 'default' as const,
         disabled: false,
       };
     }
@@ -165,15 +171,15 @@ export function QuizScreen() {
       if (isListening || isRecording) {
         return {
           text: 'Stop & Submit',
-          icon: StopIcon,
-          className: 'btn-error text-lg px-8 py-4 animate-pulse-fast',
+          icon: Square,
+          variant: 'destructive' as const,
           disabled: false,
         };
       } else {
         return {
           text: 'Start Recording',
-          icon: MicrophoneIcon,
-          className: 'btn-success text-lg px-8 py-4',
+          icon: Mic,
+          variant: 'default' as const,
           disabled: false,
         };
       }
@@ -181,8 +187,8 @@ export function QuizScreen() {
 
     return {
       text: 'Processing...',
-      icon: MicrophoneIcon,
-      className: 'btn-secondary text-lg px-8 py-4',
+      icon: Clock,
+      variant: 'secondary' as const,
       disabled: true,
     };
   };
@@ -225,98 +231,108 @@ export function QuizScreen() {
   const ButtonIcon = micButton.icon;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="card p-8">
-        {/* Progress Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-sm font-medium text-gray-500">
-            Question {progress} of {total}
-          </div>
-          <div className="text-sm font-medium text-gray-500">
-            {Math.ceil(timeRemaining / 1000)}s remaining
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="progress-bar mb-8">
-          <div
-            className={`progress-fill ${getTimerColor()}`}
-            style={{ width: `${getTimerProgress()}%` }}
-          />
-        </div>
-
-        {/* Question */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            {question.prompt}
-          </h2>
-        </div>
-
-        {/* Status Message */}
-        <div className="text-center mb-6">
-          <p className={`text-sm font-medium ${
-            timerState === 'ANSWERING_ACTIVE' && answerStartTime && !hasStartedSpeaking
-              ? 'text-red-600'
-              : 'text-gray-600'
-          }`}>
-            {getStatusMessage()}
-          </p>
-        </div>
-
-        {/* User Answer Preview */}
-        {userAnswer && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm font-medium text-gray-700 mb-2">Your answer:</p>
-            <p className="text-gray-900">{userAnswer}</p>
-          </div>
-        )}
-
-        {/* Mic Button and Skip Button */}
-        <div className="flex justify-center items-center gap-4 mb-6">
-          <button
-            onClick={handleMicClick}
-            disabled={micButton.disabled}
-            className={micButton.className}
-            aria-label={micButton.text}
-          >
-            <ButtonIcon className="w-6 h-6 mr-2" />
-            {micButton.text}
-          </button>
-          
-          {/* Skip Button */}
-          {timerState !== 'EVALUATING' && timerState !== 'SHOWING_RESULT' && (
-            <button
-              onClick={handleSkipQuestion}
-              className="btn-secondary text-lg px-6 py-4"
-              aria-label="Skip Question"
-            >
-              <ArrowRightIcon className="w-5 h-5 mr-2" />
-              Skip
-            </button>
-          )}
-        </div>
-
-        {/* Recording Indicator */}
-        {(isListening || isRecording) && (
-          <div className="text-center">
-            <div className="inline-flex items-center space-x-2 bg-red-50 text-red-700 px-4 py-2 rounded-full">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">
-                {isListening ? 'Listening...' : 'Recording...'}
-              </span>
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <Card className="w-full max-w-3xl">
+        <CardHeader className="pb-4">
+          {/* Progress Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm font-medium text-muted-foreground">
+              Question {progress} of {total}
+            </div>
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              {Math.ceil(timeRemaining / 1000)}s remaining
             </div>
           </div>
-        )}
 
-        {/* Speech Start Warning */}
-        {timerState === 'ANSWERING_ACTIVE' && answerStartTime && !hasStartedSpeaking && (
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800 text-center">
-              ⚠️ Remember: You must begin speaking within the first 10 seconds of the answer phase!
+          {/* Progress Bar */}
+          <Progress 
+            value={getTimerProgress()} 
+            className="mb-6"
+            style={{
+              '--progress-foreground': timerState === 'THINKING' ? 'hsl(var(--primary))' : 
+                                    timerState === 'ANSWERING_ACTIVE' ? 'hsl(142 76% 36%)' : 
+                                    'hsl(var(--muted))'
+            } as React.CSSProperties}
+          />
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* Question */}
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-bold text-foreground leading-tight">
+              {question.prompt}
+            </h2>
+            
+            {/* Status Message */}
+            <p className={`text-sm font-medium ${
+              timerState === 'ANSWERING_ACTIVE' && answerStartTime && !hasStartedSpeaking
+                ? 'text-destructive'
+                : 'text-muted-foreground'
+            }`}>
+              {getStatusMessage()}
             </p>
           </div>
-        )}
-      </div>
+
+          {/* User Answer Preview */}
+          {userAnswer && (
+            <div className="bg-muted/50 rounded-lg p-4 border">
+              <p className="text-sm font-medium text-foreground mb-2">Your answer:</p>
+              <p className="text-foreground">{userAnswer}</p>
+            </div>
+          )}
+
+          {/* Main Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <Button
+              onClick={handleMicClick}
+              disabled={micButton.disabled}
+              variant={micButton.variant}
+              size="lg"
+              className={`min-w-48 h-12 text-base ${
+                (isListening || isRecording) ? 'animate-pulse' : ''
+              }`}
+            >
+              <ButtonIcon className="w-5 h-5 mr-2" />
+              {micButton.text}
+            </Button>
+            
+            {/* Skip Button */}
+            {timerState !== 'EVALUATING' && timerState !== 'SHOWING_RESULT' && (
+              <Button
+                onClick={handleSkipQuestion}
+                variant="outline"
+                size="lg"
+                className="min-w-32"
+              >
+                <SkipForward className="w-4 h-4 mr-2" />
+                Skip
+              </Button>
+            )}
+          </div>
+
+          {/* Recording Indicator */}
+          {(isListening || isRecording) && (
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-2 bg-destructive/10 text-destructive px-4 py-2 rounded-full border border-destructive/20">
+                <div className="w-3 h-3 bg-destructive rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">
+                  {isListening ? 'Listening...' : 'Recording...'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Speech Start Warning */}
+          {timerState === 'ANSWERING_ACTIVE' && answerStartTime && !hasStartedSpeaking && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800 text-center">
+                ⚠️ Remember: You must begin speaking within the first 10 seconds of the answer phase!
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
