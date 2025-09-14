@@ -38,7 +38,7 @@ export function useSpeechRecognition() {
   
   const { 
     setUserAnswer, 
-    setHasStartedSpeaking, 
+    setSpeechDetected, 
     timerState,
     setIsRecording 
   } = useGameStore();
@@ -89,9 +89,9 @@ export function useSpeechRecognition() {
 
         const fullTranscript = (finalTranscript + interimTranscript).trim();
         
-        if (fullTranscript && !useGameStore.getState().hasStartedSpeaking) {
-          setHasStartedSpeaking(true);
-          console.log('[SPEECH] Detected speech, set hasStartedSpeaking = true');
+        if (fullTranscript && !useGameStore.getState().speechDetected) {
+          setSpeechDetected(true);
+          console.log('[SPEECH] Detected speech, set speechDetected = true');
         }
         
         // Clean up the transcript for better accuracy
@@ -209,8 +209,8 @@ export function useSpeechRecognition() {
             const result = await response.json();
             const transcript = result.transcript?.trim() || '';
             
-            if (transcript && !useGameStore.getState().hasStartedSpeaking) {
-              setHasStartedSpeaking(true);
+            if (transcript && !useGameStore.getState().speechDetected) {
+              setSpeechDetected(true);
             }
             
             setUserAnswer(transcript);
@@ -248,9 +248,9 @@ export function useSpeechRecognition() {
           
           if (!speechDetected) {
             speechDetected = true;
-            if (!useGameStore.getState().hasStartedSpeaking) {
-              setHasStartedSpeaking(true);
-              console.log('[SPEECH] Detected speech via audio level, set hasStartedSpeaking = true');
+            if (!useGameStore.getState().speechDetected) {
+              setSpeechDetected(true);
+              console.log('[SPEECH] Detected speech via audio level, set speechDetected = true');
             }
           }
         }

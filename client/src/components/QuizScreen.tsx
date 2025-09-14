@@ -16,24 +16,22 @@ export function QuizScreen() {
     timeRemaining,
     userAnswer,
     answerStartTime,
-    hasStartedSpeaking,
+    respondingStarted,
+    speechDetected,
     isRecording,
     currentQuestion,
     setTimerState,
+    setRespondingStarted,
+    setSpeechDetected,
+    setUserAnswer,
     addTranscriptEntry,
     nextQuestion,
   } = useGameStore();
 
   const { isListening, startListening, stopListening } = useSpeechRecognition();
 
-  // Timer logic with auto recording callbacks
-  const { startAnswering, startThinking } = useTimer({
-    onAutoStartRecording: () => {
-      if (timerState === 'THINKING') {
-        startAnswering();
-        startListening();
-      }
-    },
+  // Timer logic: only 30s to answer after user hits start
+  const { startResponding } = useTimer({
     onAutoStopRecording: () => {
       if (timerState === 'ANSWERING_ACTIVE' && (isListening || isRecording)) {
         stopListening();
@@ -46,18 +44,22 @@ export function QuizScreen() {
   const progress = currentQuestionIndex + 1;
   const total = questions.length;
 
-  // Start first question
+  // Reset for every question
   useEffect(() => {
-    if (questions.length > 0 && timerState === 'IDLE') {
-      startThinking();
-    }
-  }, [questions, timerState, startThinking]);
+    // No auto-start, user must click mic to begin
+    setRespondingStarted(false);
+    setSpeechDetected(false);
+    setUserAnswer('');
+  }, [currentQuestionIndex, questions.length]);
 
   const handleMicClick = () => {
-    if (timerState === 'THINKING') {
-      startAnswering();
+    if (timerState !== 'ANSWERING_ACTIVE' && !respondingStarted) {
+      setRespondingStarted(true);
+      setSpeechDetected(false);
+      setUserAnswer(''); // Clear transcript for new answer
+      startResponding();
       startListening();
-    } else if (timerState === 'ANSWERING_ACTIVE') {
+    } else if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
       if (isListening || isRecording) {
         stopListening();
         handleSubmitAnswer();
@@ -198,32 +200,14 @@ export function QuizScreen() {
   };
 
   const getStatusMessage = () => {
-    if (timerState === 'THINKING') {
-      return 'Think about your answer. Tap the mic to start answering anytime.';
+    if (timerState !== 'ANSWERING_ACTIVE') {
+      return 'Tap the mic to start answering. You have 30 seconds.';
     }
-    if (timerState === 'ANSWERING_ACTIVE') {
-      if (answerStartTime && !hasStartedSpeaking) {
-        const timeSinceStart = performance.now() - answerStartTime;
-        const remaining = Math.max(0, 10000 - timeSinceStart);
-        if (remaining > 0) {
-          return `You must start speaking within ${Math.ceil(remaining / 1000)} seconds!`;
-        } else {
-          return 'Time to start speaking has expired!';
-        }
-      }
-      if (isListening || isRecording) {
-        return 'Listening... Speak your answer clearly.';
-      } else {
-        return 'Tap the mic to start recording your answer.';
-      }
+    if (isListening || isRecording) {
+      return 'Listening... Speak your answer clearly.';
+    } else {
+      return 'Tap the mic to start recording your answer.';
     }
-    if (timerState === 'EVALUATING') {
-      return 'Evaluating your answer...';
-    }
-    if (timerState === 'SHOWING_RESULT') {
-      return 'Moving to next question...';
-    }
-    return '';
   };
 
   const micButton = getMicButtonState();
@@ -238,9 +222,9 @@ export function QuizScreen() {
             <div className="text-sm font-medium text-muted-foreground">
               Question {progress} of {total}
             </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              {Math.ceil(timeRemaining / 1000)}s remaining
+            <div className="flex items-center gap-2 text-2xl font-bold text-muted-foreground">
+              {Math.ceil(timeRemaining / 1000)}
+              <span className="ml-1 text-base font-medium">sec</span>
             </div>
           </div>
 
@@ -264,11 +248,7 @@ export function QuizScreen() {
             </h2>
             
             {/* Status Message */}
-            <p className={`text-sm font-medium ${
-              timerState === 'ANSWERING_ACTIVE' && answerStartTime && !hasStartedSpeaking
-                ? 'text-destructive'
-                : 'text-muted-foreground'
-            }`}>
+            <p className="text-sm font-medium text-muted-foreground">
               {getStatusMessage()}
             </p>
           </div>
@@ -322,14 +302,7 @@ export function QuizScreen() {
             </div>
           )}
 
-          {/* Speech Start Warning */}
-          {timerState === 'ANSWERING_ACTIVE' && answerStartTime && !hasStartedSpeaking && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800 text-center">
-                ⚠️ Remember: You must begin speaking within the first 10 seconds of the answer phase!
-              </p>
-            </div>
-          )}
+          {/* No speech start warning needed in simplified mode */}
         </CardContent>
       </Card>
     </div>

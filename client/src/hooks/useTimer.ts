@@ -1,15 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../stores/gameStore';
 
-const THINK_TIME = 10000; // 10 seconds
-const ANSWER_TIME = 30000; // 30 seconds
-
+const ANSWER_TIME = 30000; // 30 seconds max for answering
 
 export function useTimer({
-  onAutoStartRecording,
   onAutoStopRecording
 }: {
-  onAutoStartRecording?: () => void;
   onAutoStopRecording?: () => void;
 } = {}) {
   const frameRef = useRef<number>();
@@ -18,15 +14,16 @@ export function useTimer({
     timerState,
     timeRemaining,
     answerStartTime,
-    hasStartedSpeaking,
-    setTimerState,
-    setTimeRemaining,
-    addTranscriptEntry,
-    nextQuestion,
-    currentQuestion
+  respondingStarted,
+  setTimerState,
+  setTimeRemaining,
+  setRespondingStarted,
+  setSpeechDetected,
+  setUserAnswer,
+  addTranscriptEntry,
+  nextQuestion,
+  currentQuestion
   } = useGameStore();
-
-const SPEECH_START_WINDOW = 10000; // 10 seconds to start speaking
 
   const stopTimer = () => {
     if (frameRef.current) {
@@ -44,50 +41,26 @@ const SPEECH_START_WINDOW = 10000; // 10 seconds to start speaking
     const deltaTime = timestamp - lastTimestampRef.current;
     lastTimestampRef.current = timestamp;
 
-    const newTimeRemaining = Math.max(0, timeRemaining - deltaTime);
+    let newTimeRemaining = Math.max(0, timeRemaining - deltaTime);
     setTimeRemaining(newTimeRemaining);
 
-    // Handle state transitions based on timer
-
-    if (newTimeRemaining <= 0) {
-      if (timerState === 'THINKING') {
-        // Auto-start recording and answer phase
-        setTimerState('ANSWERING_ACTIVE');
-        setTimeRemaining(ANSWER_TIME);
-        useGameStore.getState().setAnswerStartTime(performance.now());
-        if (onAutoStartRecording) onAutoStartRecording();
-      } else if (timerState === 'ANSWERING_ACTIVE') {
-        // Auto-stop recording and submit
+    // Responding State: 30s max
+    if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
+      const timeSinceAnswerStart = performance.now() - (answerStartTime || 0);
+      if (timeSinceAnswerStart > ANSWER_TIME) {
         if (onAutoStopRecording) onAutoStopRecording();
         handleAnswerTimeout();
         return;
       }
-    }
-
-    // Check for speech start timeout during answering
-    if (timerState === 'ANSWERING_ACTIVE' && answerStartTime) {
-      // Debug log
-      if (!hasStartedSpeaking) {
-        const timeSinceAnswerStart = performance.now() - answerStartTime;
-        console.log('[TIMER] hasStartedSpeaking:', hasStartedSpeaking, 'timeSinceAnswerStart:', timeSinceAnswerStart);
-        if (timeSinceAnswerStart > SPEECH_START_WINDOW) {
-          // Auto-fail for not speaking within 10 seconds
-          handleNoSpeechFail();
-          return;
-        }
-      } else {
-        console.log('[TIMER] User has started speaking, allowing full 30s to answer.');
-      }
-    }
-
-    // Continue timer if still running
-    if (newTimeRemaining > 0 && (timerState === 'THINKING' || timerState === 'ANSWERING_ACTIVE')) {
       frameRef.current = requestAnimationFrame(tick);
+      return;
     }
   };
 
   const handleAnswerTimeout = () => {
     stopTimer();
+    setRespondingStarted(false);
+    setSpeechDetected(false);
     const question = currentQuestion();
     if (question) {
       const entry = {
@@ -99,71 +72,39 @@ const SPEECH_START_WINDOW = 10000; // 10 seconds to start speaking
       };
       addTranscriptEntry(entry);
     }
-    
     setTimerState('SHOWING_RESULT');
     setTimeout(() => {
       nextQuestion();
     }, 1500);
   };
 
-  const handleNoSpeechFail = () => {
-    stopTimer();
-    const question = currentQuestion();
-    if (question) {
-      const entry = {
-        questionId: question.id,
-        questionPrompt: question.prompt,
-        userAnswer: '',
-        verdict: 'INCORRECT' as const,
-        briefFeedback: 'No answer detected within 10s.',
-      };
-      addTranscriptEntry(entry);
-    }
-    
-    setTimerState('SHOWING_RESULT');
-    setTimeout(() => {
-      nextQuestion();
-    }, 1500);
-  };
 
   const startTimer = () => {
-    if (timerState === 'THINKING' || timerState === 'ANSWERING_ACTIVE') {
-      stopTimer();
-      frameRef.current = requestAnimationFrame(tick);
-    }
-  };
-
-
-  const startAnswering = () => {
-    if (timerState === 'THINKING') {
-      stopTimer();
-      setTimerState('ANSWERING_ACTIVE');
-      setTimeRemaining(ANSWER_TIME);
-      useGameStore.getState().setAnswerStartTime(performance.now());
-      frameRef.current = requestAnimationFrame(tick);
-    }
-  };
-
-  const startThinking = () => {
     stopTimer();
-    setTimerState('THINKING');
-    setTimeRemaining(THINK_TIME);
-    useGameStore.getState().setAnswerStartTime(null);
-    useGameStore.getState().setHasStartedSpeaking(false);
-    useGameStore.getState().setUserAnswer(''); // Clear transcript
+    frameRef.current = requestAnimationFrame(tick);
+  };
+
+  // Only one state: Responding
+  const startResponding = () => {
+    stopTimer();
+    setTimerState('ANSWERING_ACTIVE');
+    setTimeRemaining(ANSWER_TIME);
+    setRespondingStarted(true);
+    setSpeechDetected(false);
+    setUserAnswer(''); // Clear transcript for new answer
+    useGameStore.getState().setAnswerStartTime(performance.now());
     frameRef.current = requestAnimationFrame(tick);
   };
 
   // Start timer when state changes to THINKING or ANSWERING_ACTIVE
   useEffect(() => {
-    if (timerState === 'THINKING' || timerState === 'ANSWERING_ACTIVE') {
+    if (timerState === 'ANSWERING_ACTIVE' && respondingStarted) {
       startTimer();
     } else {
       stopTimer();
     }
-
     return () => stopTimer();
-  }, [timerState]);
+  }, [timerState, respondingStarted]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -171,8 +112,7 @@ const SPEECH_START_WINDOW = 10000; // 10 seconds to start speaking
   }, []);
 
   return {
-    startAnswering,
-    startThinking,
+    startResponding,
     stopTimer,
   };
 }

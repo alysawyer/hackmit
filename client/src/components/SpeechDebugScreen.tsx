@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 
 export function SpeechDebugScreen({ onContinue }: { onContinue: () => void }) {
   const { isListening, startListening, stopListening } = useSpeechRecognition();
-  const { hasStartedSpeaking, userAnswer } = useGameStore();
+  const { speechDetected, userAnswer } = useGameStore();
   const [localTranscript, setLocalTranscript] = useState('');
 
   // Keep local transcript in sync with store
@@ -23,9 +23,9 @@ export function SpeechDebugScreen({ onContinue }: { onContinue: () => void }) {
           {localTranscript || <span className="text-muted-foreground">(No speech detected yet)</span>}
         </div>
         <div className="mb-4">
-          <span className="font-medium">hasStartedSpeaking:</span>
-          <span className={hasStartedSpeaking ? 'text-green-600 font-bold ml-2' : 'text-red-600 font-bold ml-2'}>
-            {hasStartedSpeaking ? 'true' : 'false'}
+          <span className="font-medium">speechDetected:</span>
+          <span className={speechDetected ? 'text-green-600 font-bold ml-2' : 'text-red-600 font-bold ml-2'}>
+            {speechDetected ? 'true' : 'false'}
           </span>
         </div>
         <div className="flex gap-4 mb-4">
