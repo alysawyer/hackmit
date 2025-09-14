@@ -62,8 +62,12 @@ IMPORTANT RULES:
 Return ONLY this JSON format:
 {
   "verdict": "CORRECT" or "INCORRECT",
-  "briefFeedback": "For CORRECT: 'Correct!' or similar. For INCORRECT: 'The correct answer is: [actual answer]'"
+  "briefFeedback": "For CORRECT: 'Correct!' or similar. For INCORRECT: a short summary of why the answer is wrong.",
+  "correctAnswer": "[the correct answer, if INCORRECT]",
+  "explanation": "[a concise explanation of why the correct answer is correct and why the user's answer is wrong, if INCORRECT]"
 }
+
+If the answer is CORRECT, you may omit correctAnswer and explanation.
 
 Examples of CORRECT verdicts:
 - Question: "What region do Yasuo and Yone originate from?" 
@@ -223,7 +227,21 @@ Evaluate if the user's answer demonstrates understanding of the core concept. Be
     }
 
     const parsedResponse = JSON.parse(jsonMatch[0]);
-    const result = EvalResponseSchema.parse(parsedResponse);
+    // Patch: If INCORRECT and correctAnswer/explanation missing, try to extract from briefFeedback
+    let result = EvalResponseSchema.parse(parsedResponse);
+    if (result.verdict === 'INCORRECT') {
+      // Try to extract correct answer from briefFeedback if not present
+      if (!result.correctAnswer && result.briefFeedback) {
+        const match = result.briefFeedback.match(/correct answer is:?\s*([^.]+)[.]/i);
+        if (match && match[1]) {
+          result = { ...result, correctAnswer: match[1].trim() };
+        }
+      }
+      // Fallback explanation if not present
+      if (!result.explanation && result.briefFeedback) {
+        result = { ...result, explanation: result.briefFeedback };
+      }
+    }
     return result;
 
   } catch (error) {
