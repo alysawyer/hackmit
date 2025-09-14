@@ -18,21 +18,60 @@ const GENERATION_SYSTEM_PROMPT = `You are a pedagogy-aware question generator. P
 
 Match the requested difficulty.
 
-Output only the JSON for QuestionListResponse (no prose).
+Return ONLY valid JSON in this exact format:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "difficulty": "easy",
+      "prompt": "Question text here",
+      "topic": "optional topic"
+    }
+  ]
+}
 
-Keep each prompt < 160 chars; avoid multi-part questions.
+Requirements:
+- Exactly 20 questions
+- Each prompt < 160 characters
+- Use the requested difficulty for all questions
+- Generate unique IDs (q1, q2, q3, etc.)
+- Base questions on the provided material
+- If insufficient material, return: {"error": "Insufficient material"}
 
-Pull from provided material text. If insufficient, return error JSON: { "error": "Insufficient material" }.`;
+No additional text, just the JSON.`;
 
-const EVALUATION_SYSTEM_PROMPT = `You evaluate one user answer for the provided question.
+const EVALUATION_SYSTEM_PROMPT = `You are evaluating a user's spoken answer to a quiz question. Be VERY LENIENT - accept answers that show any reasonable understanding.
 
-Use supplied materialContext as ground truth; if absent, use general domain knowledge conservatively.
+IMPORTANT RULES:
+1. Mark as CORRECT if the answer contains the key concept, even if:
+   - The phrasing is different
+   - There are minor errors or omissions
+   - The answer is incomplete but shows understanding
+   - There are transcription errors from speech-to-text
 
-Return only EvalResponse JSON; no prose.
+2. Only mark as INCORRECT if:
+   - The answer is completely wrong
+   - The answer shows no understanding of the question
+   - The answer is about something entirely different
 
-Be strict but fair. Mark INCORRECT if the core claim is wrong, missing, or off-topic.
+3. For League of Legends questions specifically:
+   - Accept common abbreviations (e.g., "Kat" for Katarina)
+   - Accept alternative names/spellings
+   - Accept partial correct information
 
-Fill wrongSpans with index ranges for clearly wrong phrases when possible; keep briefFeedback <= 200 chars.`;
+Return ONLY this JSON format:
+{
+  "verdict": "CORRECT" or "INCORRECT",
+  "briefFeedback": "For CORRECT: 'Correct!' or similar. For INCORRECT: 'The correct answer is: [actual answer]'"
+}
+
+Examples of CORRECT verdicts:
+- Question: "What region do Yasuo and Yone originate from?" 
+  Answer: "Ionia" or "they're from Ionia" or "I think Ionia" → CORRECT
+- Question: "Who is the champion of Demacia?"
+  Answer: "Garen" or "It's Garen" or "Karen" (transcription error) → CORRECT
+
+No additional text, just the JSON.`;
 
 export async function generateQuestions(
   material: string,
@@ -51,7 +90,7 @@ Difficulty: ${difficulty}
 Generate exactly 20 questions based on this material at ${difficulty} difficulty level. Each question should be answerable in ~15 seconds by a well-prepared student.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       temperature: 0.1,
       top_p: 0.9,
@@ -102,7 +141,7 @@ Generate exactly 20 questions based on this material at ${difficulty} difficulty
     // Retry once
     try {
       const retryResponse = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 4000,
         temperature: 0.1,
         top_p: 0.9,
@@ -146,20 +185,23 @@ export async function evaluateAnswer(
   try {
     const contextPrompt = materialContext 
       ? `Question: ${questionPrompt}
-User Answer: ${userAnswer}
-Material Context: ${materialContext}
 
-Evaluate the user's answer based on the question and material context.`
+User's Spoken Answer: "${userAnswer}"
+
+Material Context for Reference: ${materialContext}
+
+Evaluate if the user's answer is correct. Be lenient with spoken language variations. If incorrect, provide the actual correct answer in the briefFeedback.`
       : `Question: ${questionPrompt}
-User Answer: ${userAnswer}
 
-Evaluate the user's answer based on general domain knowledge.`;
+User's Spoken Answer: "${userAnswer}"
+
+Evaluate if the user's answer demonstrates understanding of the core concept. Be lenient with spoken language variations. If incorrect, provide the actual correct answer based on general knowledge.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1000,
-      temperature: 0.1,
-      top_p: 0.9,
+      temperature: 0.2,
+      top_p: 0.95,
       system: EVALUATION_SYSTEM_PROMPT,
       messages: [
         {
@@ -187,10 +229,10 @@ Evaluate the user's answer based on general domain knowledge.`;
   } catch (error) {
     console.error('Error evaluating answer:', error);
     
-    // Fallback evaluation
+    // More informative fallback
     return {
       verdict: 'INCORRECT',
-      briefFeedback: 'Unable to evaluate answer due to technical error.',
+      briefFeedback: `Could not verify answer. Your answer: "${userAnswer.slice(0, 50)}${userAnswer.length > 50 ? '...' : ''}"`,
     };
   }
 }

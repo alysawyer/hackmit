@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/solid';
+import { MicrophoneIcon, StopIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import { useGameStore } from '../stores/gameStore';
 import { useTimer } from '../hooks/useTimer';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
@@ -46,6 +46,20 @@ export function QuizScreen() {
         startListening();
       }
     }
+  };
+
+  const handleSkipQuestion = () => {
+    // Add a blank entry for skipped question
+    const entry = {
+      questionId: question.id,
+      questionPrompt: question.prompt,
+      userAnswer: '[Skipped]',
+      verdict: 'INCORRECT' as const,
+      briefFeedback: 'Question was skipped.',
+    };
+
+    addTranscriptEntry(entry);
+    nextQuestion();
   };
 
   const handleSubmitAnswer = async () => {
@@ -236,12 +250,6 @@ export function QuizScreen() {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             {question.prompt}
           </h2>
-          
-          {question.topic && (
-            <p className="text-sm text-gray-500 mb-4">
-              Topic: {question.topic}
-            </p>
-          )}
         </div>
 
         {/* Status Message */}
@@ -263,8 +271,8 @@ export function QuizScreen() {
           </div>
         )}
 
-        {/* Mic Button */}
-        <div className="text-center mb-6">
+        {/* Mic Button and Skip Button */}
+        <div className="flex justify-center items-center gap-4 mb-6">
           <button
             onClick={handleMicClick}
             disabled={micButton.disabled}
@@ -274,6 +282,18 @@ export function QuizScreen() {
             <ButtonIcon className="w-6 h-6 mr-2" />
             {micButton.text}
           </button>
+          
+          {/* Skip Button */}
+          {timerState !== 'EVALUATING' && timerState !== 'SHOWING_RESULT' && (
+            <button
+              onClick={handleSkipQuestion}
+              className="btn-secondary text-lg px-6 py-4"
+              aria-label="Skip Question"
+            >
+              <ArrowRightIcon className="w-5 h-5 mr-2" />
+              Skip
+            </button>
+          )}
         </div>
 
         {/* Recording Indicator */}

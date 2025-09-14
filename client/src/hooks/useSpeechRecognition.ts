@@ -53,17 +53,38 @@ export function useSpeechRecognition() {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
+      recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
 
       recognition.addEventListener('result', (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
         let interimTranscript = '';
+        let confidence = 0;
 
         for (let i = 0; i < event.results.length; i++) {
-          const transcript = event.results[i]?.[0]?.transcript || '';
-          if (event.results[i]?.isFinal) {
-            finalTranscript += transcript;
+          const result = event.results[i];
+          if (!result) continue;
+          
+          // Use the best alternative with highest confidence
+          let bestTranscript = '';
+          let bestConfidence = 0;
+          
+          for (let j = 0; j < result.length; j++) {
+            const alternative = result[j];
+            if (alternative && alternative.confidence > bestConfidence) {
+              bestTranscript = alternative.transcript;
+              bestConfidence = alternative.confidence;
+            }
+          }
+          
+          if (!bestTranscript && result[0]) {
+            bestTranscript = result[0].transcript || '';
+          }
+          
+          if (result.isFinal) {
+            finalTranscript += bestTranscript + ' ';
+            confidence = Math.max(confidence, bestConfidence);
           } else {
-            interimTranscript += transcript;
+            interimTranscript += bestTranscript + ' ';
           }
         }
 
@@ -73,7 +94,18 @@ export function useSpeechRecognition() {
           setHasStartedSpeaking(true);
         }
         
-        setUserAnswer(fullTranscript);
+        // Clean up the transcript for better accuracy
+        const cleanedTranscript = fullTranscript
+          .replace(/\s+/g, ' ')  // Remove extra spaces
+          .replace(/\b(uh|um|er|ah)\b/gi, '')  // Remove filler words
+          .trim();
+        
+        setUserAnswer(cleanedTranscript);
+        
+        // Log confidence for debugging
+        if (confidence > 0) {
+          console.log('Speech confidence:', confidence);
+        }
       });
 
       recognition.addEventListener('start', () => {
@@ -87,6 +119,15 @@ export function useSpeechRecognition() {
       recognition.addEventListener('error', (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
+        
+        // Auto-restart on certain errors
+        if (event.error === 'network' || event.error === 'aborted') {
+          setTimeout(() => {
+            if (timerState === 'ANSWERING_ACTIVE') {
+              startListening();
+            }
+          }, 1000);
+        }
       });
 
       recognitionRef.current = recognition;
@@ -105,9 +146,23 @@ export function useSpeechRecognition() {
     if (recognitionRef.current && isSupported) {
       // Use browser speech recognition
       try {
+        // Stop any existing recognition first
+        if (isListening) {
+          recognitionRef.current.stop();
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         recognitionRef.current.start();
-      } catch (error) {
+        console.log('Speech recognition started');
+      } catch (error: any) {
         console.error('Error starting speech recognition:', error);
+        
+        // If already started, just continue
+        if (error?.message?.includes('already started')) {
+          setIsListening(true);
+          return;
+        }
+        
         // Fallback to recording
         startRecording();
       }
@@ -183,16 +238,31 @@ export function useSpeechRecognition() {
       
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       let speechDetected = false;
+      let silenceStart = Date.now();
+      const SILENCE_THRESHOLD = 30; // Lower threshold for better detection
+      const SILENCE_DURATION = 2000; // Stop after 2 seconds of silence
       
       const checkForSpeech = () => {
         analyser.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         
-        if (average > 50 && !speechDetected) { // Threshold for speech detection
-          speechDetected = true;
-          if (!useGameStore.getState().hasStartedSpeaking) {
-            setHasStartedSpeaking(true);
+        if (average > SILENCE_THRESHOLD) {
+          silenceStart = Date.now(); // Reset silence timer
+          
+          if (!speechDetected) {
+            speechDetected = true;
+            if (!useGameStore.getState().hasStartedSpeaking) {
+              setHasStartedSpeaking(true);
+              console.log('Speech detected via audio level');
+            }
           }
+        }
+        
+        // Auto-stop recording after prolonged silence
+        if (speechDetected && Date.now() - silenceStart > SILENCE_DURATION) {
+          console.log('Stopping recording due to silence');
+          mediaRecorder.stop();
+          return;
         }
         
         if (mediaRecorder.state === 'recording') {
